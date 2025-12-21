@@ -1,0 +1,16 @@
+# Dependencies (Yeh bohot heavy hoti hain, inhe upload nahi karte)
+node_modules/
+package-lock.json
+
+# Environment Variables (Secrets - Inhe kabhi upload mat karna)
+.env
+
+# Build Output
+dist/
+build/
+
+# Mac System Files (Tum Mac use kar rahe ho, ye zaroori hai)
+.DS_Store
+
+# Extension Specific
+extension/*.pem

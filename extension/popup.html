@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clueso Recorder</title>
+    <style>
+      body {
+        width: 250px;
+        padding: 16px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        text-align: center;
+        background-color: #f9fafb;
+      }
+      /*utility classes to toggle visibility */
+      .display-none {
+        display: none;
+      }
+      h2 {
+        margin-top: 0;
+        color: #1f2937;
+        font-size: 18px;
+      }
+      p {
+        color: #6b7280;
+        font-size: 14px;
+      }
+      /*btn styling */
+      .btn {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .btn-primary {
+        background-color: #2563eb; /*blue color for rec sttart */
+        color: white;
+      }
+      .btn-primary:hover {
+        background-color: #1d4ed8;
+      }
+      .btn-danger {
+        background-color: #dc2626; /*red color for rec stop */
+        color: white;
+      }
+      .btn-danger:hover {
+        background-color: #b91c1c;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Workflow Recorder</h2>
+
+    <div id="initialControlPanel">
+      <p>Ready to capture your workflow?</p>
+      <button id="triggerRecordBtn" class="btn btn-primary">
+        Start Recording
+      </button>
+    </div>
+
+    <div id="activeControlPanel" class="display-none">
+      <p style="color: #dc2626; font-weight: bold">🔴 Recording in progress...</p>
+      <button id="finishRecordBtn" class="btn btn-danger">
+        Stop Recording
+      </button>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

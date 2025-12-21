@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "clueso-clone",
+  "version": "1.0.0",
+  "description": "It will record workflow steps and video for documentation",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Open Recorder"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [{ "matches": ["<all_urls>"], "js": ["content.js"] }]
+}
