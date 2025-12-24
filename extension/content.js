@@ -55,7 +55,7 @@ function logUserClick(event) {
   const target = event.target;
   //storning the event info in an object
   const clickData = {
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString(), // converting current time to string for db consistency
     x: event.clientX,
     y: event.clientY,
     tagName: target.tagName,
