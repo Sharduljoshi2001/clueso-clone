@@ -1,107 +1,104 @@
-let recorder = null; //MediaRecorder instance
+let recorder = null;
 let videoChunks = [];
-let eventsLog = []; //click or any kind ov event performed by the user will bhe stored in this list
-let isRecording = false; // is recording on / off bool flag
-//listening to popup.js command
+let eventsLog = [];
+let isRecording = false;
+let combinedStream = null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  //if command is INITIATE_RECORDING
   if (message.command === "INITIATE_RECORDING") {
-    console.log("recording started...");
     startCapture();
-    sendResponse({ status: "success" });
-    //if command is TERMINATE_RECORDING
+    sendResponse({ status: "started" });
   } else if (message.command === "TERMINATE_RECORDING") {
-    console.log("stop recording");
     stopCapture();
-    sendResponse({ status: "success" });
+    sendResponse({ status: "stopped" });
   }
   return true;
 });
-//startCapture function to start recording
 async function startCapture() {
   try {
-    //getting media screen from the browser(share screen popup comes up)
-    const stream = await navigator.mediaDevices.getDisplayMedia({
+    console.log("📷 Requesting permissions...");
+    //geting screen
+    const screenStream = await navigator.mediaDevices.getDisplayMedia({
       video: { mediaSource: "screen" },
-      audio: true, //for mic permission
+      audio: false
     });
-    //storage for stream data packets
+    //getting mic 
+    const audioStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false
+    });
+
+    //combining audio and video in a single stream
+    combinedStream = new MediaStream([
+      ...screenStream.getVideoTracks(),
+      ...audioStream.getAudioTracks()
+    ]);
+    recorder = new MediaRecorder(combinedStream, { mimeType: "video/webm; codecs=vp9" });
     videoChunks = [];
     eventsLog = [];
-    //setting up the recrder
-    recorder = new MediaRecorder(stream, {
-      mimeType: "video/webm; codecs=vp9",
-    });
-    //storing new data packets(video chunks)
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        videoChunks.push(event.data);
-      }
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) videoChunks.push(e.data);
     };
-    // starting the recorder
+    //handling "stop sharing" ui btn
+    screenStream.getVideoTracks()[0].onended = () => stopCapture();
     recorder.start();
     isRecording = true;
-    //listening to the clicks(any events)
     document.addEventListener("click", logUserClick, true);
-  } catch (error) {
-    console.error("permission denied or error:", error);
+    console.log("✅ Recording Started");
+  } catch (err) {
+    console.error("❌ Error starting capture:", err);
+    alert("Permission Error: " + err.message);
   }
 }
-//tracking user events
+//function to log user event(clicks)
 function logUserClick(event) {
-  //ignoring log events if the recording is off
   if (!isRecording) return;
-  //getting targeted element(element ehich is being clicked)
-  const target = event.target;
-  //storning the event info in an object
-  const clickData = {
-    timestamp: new Date().toISOString(), // converting current time to string for db consistency
+  eventsLog.push({
+    timestamp: new Date().toISOString(),
     x: event.clientX,
     y: event.clientY,
-    tagName: target.tagName,
-    //taking only 50 characters from tags text
-    text: target.innerText
-      ? target.innerText.substring(0, 50).trim()
-      : "No Text",
-    url: window.location.href,
-  };
-
-  console.log("Step Logged:", clickData);
-  eventsLog.push(clickData);
+    tagName: event.target.tagName,
+    text: (event.target.innerText || "").substring(0, 50).trim(),
+    url: window.location.href
+  });
 }
-//stop capture function to stop recording
+//function to stop recording
 function stopCapture() {
-  if (recorder && isRecording) {
-    recorder.stop();
-    isRecording = false;
-    //closing listening to clicks(or any event) (Cleanup is important for memory)
-    document.removeEventListener("click", logUserClick, true);
-    //
-    recorder.stream.getTracks().forEach((track) => track.stop());
-    //waiting for the file generation(can take milisecons that's why settimeout is used)
-    setTimeout(() => {
-      const blob = new Blob(videoChunks, { type: "video/webm" });
-      const videoUrl = URL.createObjectURL(blob);
-      console.log("✅ Recording Finished!");
-      console.log("📹 Video URL:", videoUrl);
-      console.log("📜 Steps Collected:", eventsLog);
-      //downloading the captured video(due to chromes CSP concerns link is not working)
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = videoUrl;
-      a.download = "test-recording.webm"; // File ka naam
-      document.body.appendChild(a);
-      a.click(); // Auto-click trigger
-      
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(videoUrl);
-      }, 100);
-      
-      console.log("⬇️ Video Download Triggered!");
+  if (!recorder || !isRecording) return;
+  isRecording = false;
+  recorder.stop();
+  document.removeEventListener("click", logUserClick, true);
+  combinedStream.getTracks().forEach(track => track.stop());
+  console.log("Recording Stopped. Processing...");
+  //small delay to ensure last chunk is pushed
+  setTimeout(uploadData, 500);
+}
 
-      // TODO: Yahan hum baad mein Backend API call karenge
-    }, 500);
+async function uploadData() {
+  console.log("Preparing Upload...");
+  const blob = new Blob(videoChunks, { type: "video/webm" });
+  console.log(`Video Size: ${(blob.size / 1024 / 1024).toFixed(2)} MB`);
+  if (blob.size === 0) {
+    alert("Error: Recorded video is empty!");
+    return;
+  }
+  const formData = new FormData();
+  formData.append("video", blob, "recording.webm");
+  formData.append("steps", JSON.stringify(eventsLog));
+  try {
+    const res = await fetch("http://localhost:3001/api/guides/upload", {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      console.log("Upload Success:", data);
+      alert("Guide Uploaded Successfully!");
+    } else {
+      console.error("Server Error:", data);
+      alert("Upload Failed: " + data.message);
+    }
+  } catch (err) {
+    console.error("Network Error:", err);
+    alert("Network Error: Is backend running on 3001?");
   }
 }
