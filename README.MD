@@ -1,5 +1,5 @@
 📹 Clueso.io Clone: AI-Powered Documentation Tool
-Assignment Submission for [Role Name/Company Name] Automating software documentation with intelligent screen recording and AI voiceovers.
+Assignment Submission for SubSpace, Automating software documentation with intelligent screen recording and AI voiceovers.
 
 📖 Project Overview
 This project is a functional clone of Clueso.io, designed to streamline the creation of "How-to" guides. It features a custom Chrome Extension that captures user interactions (DOM clicks) and screen video, and a robust Node.js Backend that processes this data into professional tutorials.
